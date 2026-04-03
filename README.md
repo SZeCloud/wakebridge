@@ -1,6 +1,6 @@
 # WakeBridge
 
-一个极小的 Android 辅助 App，用于在**无 root、无 Shizuku** 场景下，通过前台 `Activity` 尝试点亮屏幕，并与 Termux / OpenClaw 做最小链路集成。
+一个极小的 Android 辅助 App，用于在**无 root、无 Shizuku** 场景下，通过显式广播、`WakeLock`、全屏通知和 `AlarmClock` 兜底来尝试点亮屏幕，并与 Termux / OpenClaw 做最小链路集成。
 
 这个项目的目标不是“做一个全能自动化框架”，而是只解决一件事：
 
@@ -27,10 +27,10 @@
 
 ```text
 Termux / OpenClaw
-  -> termux-open-url
-  -> wakebridge://wake?hold_ms=...
-  -> WakeActivity
-  -> setTurnScreenOn / setShowWhenLocked / keep screen on
+  -> am broadcast -n com.shizy.wakebridge/.WakeReceiver
+  -> WakeReceiver
+  -> WakeLock / AlarmClock / Full-screen notification / WakeActivity
+  -> 点亮屏幕
 ```
 
 原因很直接：
@@ -39,7 +39,7 @@ Termux / OpenClaw
 - 它不要求 root
 - 它不依赖 Shizuku 的会话存活
 - 它不需要长期后台轮询
-- 它和 Termux / OpenClaw 的耦合点只有一条 URL 触发链
+- 它和 Termux / OpenClaw 的耦合点仍然很小，只需要一次显式广播
 
 ## 设计目标
 
@@ -82,7 +82,9 @@ Termux / OpenClaw
 这个项目没有要求 OpenClaw 深度接入 Android 权限模型，只要能执行：
 
 ```bash
-termux-open-url 'wakebridge://wake?hold_ms=12000'
+am broadcast -n com.shizy.wakebridge/.WakeReceiver \
+  -a com.shizy.wakebridge.ACTION_WAKE \
+  --ei hold_ms 12000
 ```
 
 就可以触发。
@@ -145,10 +147,10 @@ WakeBridge 没有这层依赖，维护面更小。
 - 绕过图案锁
 - 绕过指纹 / 人脸等系统安全锁
 
-### 4. 仍可能受到 Termux 启动兼容性的影响
+### 4. 成功回执仍然依赖现场验证
 
-在某些设备上，Termux 自带的 `am` 兼容层会报错或抛异常噪音。  
-所以当前推荐走自定义协议触发，而不是把 `am start` 当成唯一标准入口。
+某些设备上，普通应用拿不到完整系统日志，或者系统会放行“亮屏”但不放行“真正顶到前台”。  
+所以当前推荐把脚本输出视为“已分发 / 已尝试”，最终仍以手机是否实际亮屏、是否进入桌面为准。
 
 ## 和其他方案相比
 
@@ -212,38 +214,62 @@ WakeBridge 没有这层依赖，维护面更小。
 
 ## 触发方式
 
-### 1. 显式组件
+### 1. 显式广播到 `WakeReceiver`
+
+```bash
+am broadcast -n com.shizy.wakebridge/.WakeReceiver \
+  -a com.shizy.wakebridge.ACTION_WAKE \
+  --ei hold_ms 12000
+```
+
+### 2. 直接启动 `WakeActivity`
 
 ```bash
 am start -n com.shizy.wakebridge/.WakeActivity --ei hold_ms 12000
 ```
 
-### 2. 自定义协议
+`hold_ms` 单位是毫秒，当前代码会把它限制在 `1000` 到 `60000` 之间。
+
+### 3. 可选的 Orb Eye 上滑解锁
+
+如果设备已经安装并启用 [Orb Eye](https://github.com/KarryViber/orb-eye)，则可以在亮屏后再追加一次上滑：
 
 ```bash
-termux-open-url 'wakebridge://wake?hold_ms=12000'
+curl -sS -X POST http://127.0.0.1:7333/swipe \
+  -H 'Content-Type: application/json' \
+  -d '{"x1":540,"y1":2200,"x2":540,"y2":220,"duration":520}'
 ```
 
-`hold_ms` 单位是毫秒，当前代码会把它限制在 `1000` 到 `60000` 之间。
+这个能力只适合“无密码，仅需上滑”的锁屏场景，不绕过密码、图案、指纹等系统认证。
 
 ## 与 Termux / OpenClaw 集成
 
 推荐从 Termux 侧这样触发：
 
 ```bash
-termux-open-url 'wakebridge://wake?hold_ms=12000' >/dev/null 2>&1 || true
+am broadcast -n com.shizy.wakebridge/.WakeReceiver \
+  -a com.shizy.wakebridge.ACTION_WAKE \
+  --ei hold_ms 12000 >/dev/null 2>&1 || true
 ```
 
-在 OpenClaw 中，可以把它封成独立技能或桥接脚本，避免每次都直接拼系统命令。
+在 OpenClaw 中，当前推荐封成两个桥接命令：
+
+```bash
+phone_wake_screen
+phone_wake_unlock
+```
+
+前者只负责亮屏，后者会在亮屏后通过 Orb Eye 再做一次上滑。
 
 ## 当前设备上的实践结论
 
 在当前设备上，已经验证过以下事实：
 
 - WakeBridge 可以实际点亮屏幕
-- 直接依赖 `am start` 的返回码不可靠
-- 走自定义协议 + `termux-open-url` 更适合作为稳定入口
-- “是否成功”的最终判断，应以**手机是否真的亮屏**为准
+- 与隐式广播相比，显式广播到 `WakeReceiver` 更稳定
+- 只亮屏和“亮屏后上滑”都已经在当前设备上跑通
+- 直接依赖日志或 `am start` 返回码都不可靠
+- “是否成功”的最终判断，应以**手机是否真的亮屏 / 是否真的进入桌面**为准
 
 ## 构建
 

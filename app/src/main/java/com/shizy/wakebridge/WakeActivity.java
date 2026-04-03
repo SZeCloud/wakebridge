@@ -11,12 +11,13 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.ViewGroup;
+import android.view.Gravity;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 
 public class WakeActivity extends Activity {
     private static final String TAG = "WakeBridge";
-    private static final String EXTRA_HOLD_MS = "hold_ms";
     private static final int DEFAULT_HOLD_MS = 5000;
     private static final int MAX_HOLD_MS = 60000;
     private static final String URI_PARAM_HOLD_MS = "hold_ms";
@@ -24,6 +25,7 @@ public class WakeActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        WakeCoordinator.cancelWakeArtifacts(this);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
@@ -43,12 +45,30 @@ public class WakeActivity extends Activity {
             ViewGroup.LayoutParams.MATCH_PARENT
         ));
         root.setBackgroundColor(Color.TRANSPARENT);
+
+        TextView hint = new TextView(this);
+        hint.setText("WakeBridge 正在保持亮屏");
+        hint.setTextColor(Color.WHITE);
+        hint.setTextSize(16);
+        hint.setPadding(36, 20, 36, 20);
+        hint.setBackgroundColor(Color.argb(170, 17, 24, 39));
+        FrameLayout.LayoutParams hintParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        hintParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        hintParams.topMargin = 72;
+        root.addView(hint, hintParams);
         setContentView(root);
 
         maybeRequestDismissKeyguard();
 
         int holdMs = sanitizeHoldMs(getIntent());
-        Log.i(TAG, "wake requested, holdMs=" + holdMs);
+        String source = getIntent() != null
+            ? getIntent().getStringExtra(WakeCoordinator.EXTRA_SOURCE)
+            : "unknown";
+        WakeDebugStore.append(this, "WakeActivity 已启动，source=" + source + "，holdMs=" + holdMs);
+        Log.i(TAG, "wake requested, holdMs=" + holdMs + ", source=" + source);
 
         new Handler(Looper.getMainLooper()).postDelayed(this::finishSafely, holdMs);
     }
@@ -73,7 +93,7 @@ public class WakeActivity extends Activity {
     private int sanitizeHoldMs(Intent intent) {
         int holdMs = DEFAULT_HOLD_MS;
         if (intent != null) {
-            holdMs = intent.getIntExtra(EXTRA_HOLD_MS, DEFAULT_HOLD_MS);
+            holdMs = intent.getIntExtra(WakeCoordinator.EXTRA_HOLD_MS, DEFAULT_HOLD_MS);
             Uri data = intent.getData();
             if (data != null) {
                 String uriHoldMs = data.getQueryParameter(URI_PARAM_HOLD_MS);
@@ -94,6 +114,7 @@ public class WakeActivity extends Activity {
     }
 
     private void finishSafely() {
+        WakeDebugStore.append(this, "WakeActivity 即将结束");
         finish();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             finishAndRemoveTask();
