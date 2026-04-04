@@ -1,4 +1,4 @@
-package com.shizy.wakebridge;
+package com.szecloud.wakebridge;
 
 import android.annotation.SuppressLint;
 import android.app.AlarmManager;
@@ -17,7 +17,7 @@ public final class WakeCoordinator {
     private static final String TAG = "WakeBridge";
     public static final String EXTRA_HOLD_MS = "hold_ms";
     public static final String EXTRA_SOURCE = "source";
-    public static final String CHANNEL_ID = "wakebridge_wake";
+    public static final String CHANNEL_ID = "szecloud_wakebridge_wake";
     public static final int NOTIFICATION_ID = 1001;
     private static final int WAKE_REQUEST_CODE = 1002;
 

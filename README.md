@@ -27,7 +27,7 @@
 
 ```text
 Termux / OpenClaw
-  -> am broadcast -n com.shizy.wakebridge/.WakeReceiver
+  -> am broadcast -n com.szecloud.wakebridge/.WakeReceiver
   -> WakeReceiver
   -> WakeLock / AlarmClock / Full-screen notification / WakeActivity
   -> 点亮屏幕
@@ -83,7 +83,7 @@ Termux / OpenClaw
 
 ## 包名
 
-`com.shizy.wakebridge`
+`com.szecloud.wakebridge`
 
 ## 当前方案的优势
 
@@ -102,8 +102,8 @@ Termux / OpenClaw
 这个项目没有要求 OpenClaw 深度接入 Android 权限模型，只要能执行：
 
 ```bash
-am broadcast -n com.shizy.wakebridge/.WakeReceiver \
-  -a com.shizy.wakebridge.ACTION_WAKE \
+am broadcast -n com.szecloud.wakebridge/.WakeReceiver \
+  -a com.szecloud.wakebridge.ACTION_WAKE \
   --ei hold_ms 12000
 ```
 
@@ -248,15 +248,15 @@ WakeBridge 没有这层依赖，维护面更小。
 ### 1. 显式广播到 `WakeReceiver`
 
 ```bash
-am broadcast -n com.shizy.wakebridge/.WakeReceiver \
-  -a com.shizy.wakebridge.ACTION_WAKE \
+am broadcast -n com.szecloud.wakebridge/.WakeReceiver \
+  -a com.szecloud.wakebridge.ACTION_WAKE \
   --ei hold_ms 12000
 ```
 
 ### 2. 直接启动 `WakeActivity`
 
 ```bash
-am start -n com.shizy.wakebridge/.WakeActivity --ei hold_ms 12000
+am start -n com.szecloud.wakebridge/.WakeActivity --ei hold_ms 12000
 ```
 
 `hold_ms` 单位是毫秒，当前代码会把它限制在 `1000` 到 `60000` 之间。
@@ -293,8 +293,8 @@ curl -sS -X POST http://127.0.0.1:7333/swipe \
 推荐从 Termux 侧这样触发：
 
 ```bash
-am broadcast -n com.shizy.wakebridge/.WakeReceiver \
-  -a com.shizy.wakebridge.ACTION_WAKE \
+am broadcast -n com.szecloud.wakebridge/.WakeReceiver \
+  -a com.szecloud.wakebridge.ACTION_WAKE \
   --ei hold_ms 12000 >/dev/null 2>&1 || true
 ```
 
@@ -340,7 +340,7 @@ app/build/outputs/apk/debug/app-debug.apk
 
 ## 关键实现
 
-- [`WakeActivity.java`](app/src/main/java/com/shizy/wakebridge/WakeActivity.java)
+- [`WakeActivity.java`](app/src/main/java/com/szecloud/wakebridge/WakeActivity.java)
 - [`AndroidManifest.xml`](app/src/main/AndroidManifest.xml)
 
 实现重点：

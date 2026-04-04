@@ -1,4 +1,4 @@
-package com.shizy.wakebridge;
+package com.szecloud.wakebridge;
 
 import android.app.Activity;
 import android.app.KeyguardManager;

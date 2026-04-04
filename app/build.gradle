@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'com.shizy.wakebridge'
+    namespace 'com.szecloud.wakebridge'
     compileSdk 34
 
     defaultConfig {
-        applicationId 'com.shizy.wakebridge'
+        applicationId 'com.szecloud.wakebridge'
         minSdk 26
         targetSdk 32
         versionCode 2

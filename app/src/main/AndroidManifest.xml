@@ -26,7 +26,7 @@
             android:name=".WakeReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.shizy.wakebridge.ACTION_WAKE" />
+                <action android:name="com.szecloud.wakebridge.ACTION_WAKE" />
             </intent-filter>
         </receiver>
 
@@ -40,7 +40,7 @@
             android:theme="@style/Theme.WakeBridge.Transparent"
             android:turnScreenOn="true">
             <intent-filter>
-                <action android:name="com.shizy.wakebridge.ACTION_WAKE" />
+                <action android:name="com.szecloud.wakebridge.ACTION_WAKE" />
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
